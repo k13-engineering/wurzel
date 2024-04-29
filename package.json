@@ -7,7 +7,7 @@
   ],
   "dependencies": {
     "commentscript": "^0.0.4",
-    "es6-debug-server": "^0.0.2",
+    "es6-debug-server": "^0.0.3",
     "esm-resource": "^0.0.1",
     "express": "^4.19.2",
     "import-meta-resolve": "^4.0.0",

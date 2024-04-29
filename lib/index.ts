@@ -1,4 +1,3 @@
-// @ts-ignore
 import { create as createServer, ETryReadErrorCode, defaultCodeAnalyzer } from "es6-debug-server";
 import { readFile } from "node:fs/promises";
 import { pathToFileURL, fileURLToPath } from "node:url";
