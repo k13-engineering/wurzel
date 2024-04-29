@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "es2020",
+    "allowImportingTsExtensions": true,
+    "moduleResolution": "Node",
+    "noEmit": true,
+    "esModuleInterop": true,
+    "strict": true
+  }
+}
