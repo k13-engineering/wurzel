@@ -5,6 +5,7 @@
   "files": [
     "dist"
   ],
+  "main": "dist/lib/index.js",
   "dependencies": {
     "commentscript": "^0.0.5",
     "es6-debug-server": "^0.0.3",
