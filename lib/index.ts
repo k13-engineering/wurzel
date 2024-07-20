@@ -3,12 +3,11 @@ import { readFile } from "node:fs/promises";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { resolve as resolveImport } from "import-meta-resolve";
-// @ts-ignore
+// @ts-expect-error missing types
 import { transpileCode } from "commentscript";
 import { LRUCache } from "lru-cache";
-
-// @ts-ignore
 import type { ICodeAnalyzeResult } from "es6-debug-server";
+import type Express from "express";
 
 const md5 = ({ content }: { content: string }) => {
   return createHash("md5").update(content).digest("hex");
@@ -34,7 +33,7 @@ const expressRouter = ({
   maxAnalyzeCacheSize = 1 * 1024 * 1024,
   maxTranspileCacheSize = 64 * 1024 * 1024,
 }: {
-  express: any,
+  express: typeof Express,
   baseFolder: string,
   fileEndings?: string[],
 
@@ -58,11 +57,11 @@ const expressRouter = ({
     }
   });
 
+  // eslint-disable-next-line complexity
   const maybeTranspile = async ({ filePath, code }: { filePath: string, code: string }): Promise<TTranspileResult> => {
-
     if (filePath.endsWith(".js") || filePath.endsWith(".mjs")) {
       return {
-        "error": undefined,
+        error: undefined,
         transpiled: code
       };
     }
@@ -106,8 +105,8 @@ const expressRouter = ({
 
     tryReadScriptAsString: async ({ filePath }) => {
 
-      const { error: readError, content } = await readFile(filePath, "utf8").then((content) => {
-        return { error: undefined, content };
+      const { error: readError, content } = await readFile(filePath, "utf8").then((fileContent) => {
+        return { error: undefined, content: fileContent };
       }, (err: NodeJS.ErrnoException) => {
         return { error: err, content: undefined };
       });
@@ -181,8 +180,7 @@ const expressRouter = ({
 
       try {
         resolvedUrl = resolveImport(specifier, parentUrl.toString());
-      }
-      catch (error) {
+      } catch (error) {
         return {
           error: error as Error
         };
@@ -196,7 +194,6 @@ const expressRouter = ({
     },
   });
 
-  // @ts-ignore
   router.use((req, res, next) => {
 
     if (req.method === "HEAD") {

@@ -15,14 +15,17 @@
     "lru-cache": "^10.2.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.7.0",
     "@types/express": "^4.17.21",
     "@types/node": "^20.12.7",
-    "deno-node": "^0.0.4"
+    "deno-node": "^0.0.4",
+    "typescript-eslint": "^7.16.1"
   },
   "bin": {
     "wurzel": "dist/bin/wurzel.js"
   },
   "scripts": {
-    "build": "rm -rf dist/ && deno-node-build --root . --out dist/ --entry lib/index.ts --entry bin/wurzel.ts"
+    "build": "rm -rf dist/ && deno-node-build --root . --out dist/ --entry lib/index.ts --entry bin/wurzel.ts",
+    "eslint": "eslint ."
   }
 }
