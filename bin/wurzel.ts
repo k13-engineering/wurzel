@@ -13,5 +13,5 @@ app.use("/", wurzel({ express, baseFolder: rootFolder }));
 const port = 8080;
 
 app.listen(port, () => {
-    console.log(`listening on :${port}`);
+  console.log(`listening on :${port}`);
 });
