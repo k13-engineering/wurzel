@@ -1,9 +1,8 @@
 {
   "compilerOptions": {
-    "module": "esnext",
-    "target": "es2020",
+    "module": "NodeNext",
     "allowImportingTsExtensions": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "NodeNext",
     "noEmit": true,
     "esModuleInterop": true,
     "strict": true
