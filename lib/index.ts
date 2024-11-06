@@ -1,4 +1,12 @@
-import { create as createServer, ETryReadErrorCode, defaultCodeAnalyzer } from "es6-debug-server";
+import {
+  create as createServer,
+  ETryReadErrorCode,
+  defaultCodeAnalyzer
+} from "es6-debug-server";
+import type {
+  ICodeAnalyzeResult,
+  TResolveImportPathFunc,
+} from "es6-debug-server";
 import { readFile } from "node:fs/promises";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
@@ -6,7 +14,6 @@ import { resolve as resolveImport } from "import-meta-resolve";
 // @ts-expect-error missing types
 import { transpileCode } from "commentscript";
 import { LRUCache } from "lru-cache";
-import type { ICodeAnalyzeResult } from "es6-debug-server";
 import type Express from "express";
 
 const md5 = ({ content }: { content: string }) => {
@@ -25,6 +32,25 @@ interface ITranspileSuccessResult {
 
 type TTranspileResult = ITranspileErrorResult | ITranspileSuccessResult;
 
+const defaultResolveImportPath: TResolveImportPathFunc = async ({ importer, specifier }) => {
+  const parentUrl = pathToFileURL(importer);
+  let resolvedUrl: string | undefined = undefined;
+
+  try {
+    resolvedUrl = resolveImport(specifier, parentUrl.toString());
+  } catch (error) {
+    return {
+      error: error as Error
+    };
+  }
+
+  const resolvedPath = fileURLToPath(resolvedUrl);
+  return {
+    error: undefined,
+    filePath: resolvedPath
+  };
+};
+
 const expressRouter = ({
   express,
   baseFolder,
@@ -32,6 +58,8 @@ const expressRouter = ({
 
   maxAnalyzeCacheSize = 1 * 1024 * 1024,
   maxTranspileCacheSize = 64 * 1024 * 1024,
+
+  resolveImportPath = defaultResolveImportPath
 }: {
   express: typeof Express,
   baseFolder: string,
@@ -39,6 +67,8 @@ const expressRouter = ({
 
   maxAnalyzeCacheSize?: number,
   maxTranspileCacheSize?: number,
+
+  resolveImportPath?: TResolveImportPathFunc
 }) => {
 
   const router = express.Router();
@@ -174,24 +204,7 @@ const expressRouter = ({
       return analyzeResult;
     },
 
-    resolveImportPath: async ({ importer, specifier }) => {
-      const parentUrl = pathToFileURL(importer);
-      let resolvedUrl: string | undefined = undefined;
-
-      try {
-        resolvedUrl = resolveImport(specifier, parentUrl.toString());
-      } catch (error) {
-        return {
-          error: error as Error
-        };
-      }
-
-      const resolvedPath = fileURLToPath(resolvedUrl);
-      return {
-        error: undefined,
-        filePath: resolvedPath
-      };
-    },
+    resolveImportPath
   });
 
   router.use((req, res, next) => {
@@ -241,4 +254,10 @@ const expressRouter = ({
 
 export {
   expressRouter,
+
+  defaultResolveImportPath
+};
+
+export type {
+  TResolveImportPathFunc
 };
