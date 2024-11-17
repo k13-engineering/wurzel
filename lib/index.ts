@@ -44,6 +44,18 @@ const defaultResolveImportPath: TResolveImportPathFunc = async ({ importer, spec
     };
   }
 
+  if (resolvedUrl.startsWith("node:")) {
+    return {
+      error: Error(`node imports are not supported, got "${resolvedUrl}"`)
+    };
+  }
+
+  if (!resolvedUrl.startsWith("file:")) {
+    return {
+      error: Error(`only file imports are supported, got "${resolvedUrl}"`)
+    };
+  }
+
   const resolvedPath = fileURLToPath(resolvedUrl);
   return {
     error: undefined,
