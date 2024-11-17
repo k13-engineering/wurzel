@@ -7,7 +7,7 @@
   ],
   "main": "dist/lib/index.js",
   "dependencies": {
-    "commentscript": "^0.0.8",
+    "commentscript": "^0.0.10",
     "es6-debug-server": "^0.0.9",
     "esm-resource": "^0.0.1",
     "express": "^4.19.2",
