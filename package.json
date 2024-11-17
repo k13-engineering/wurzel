@@ -28,5 +28,15 @@
     "build": "rm -rf dist/ && deno-node-build --root . --out dist/ --entry lib/index.ts --entry bin/wurzel.ts",
     "lint": "eslint .",
     "test": "true"
-  }
+  },
+  "author": "Simon Kadisch",
+    "license": "LGPL-2.1",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/k13-engineering/wurzel.git"
+    },
+    "bugs": {
+        "url": "https://github.com/k13-engineering/wurzel/issues"
+    },
+    "homepage": "https://github.com/k13-engineering/wurzel#readme"
 }
