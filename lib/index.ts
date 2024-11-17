@@ -1,4 +1,5 @@
 import {
+  createReadError,
   create as createServer,
   ETryReadErrorCode,
   defaultCodeAnalyzer
@@ -155,19 +156,22 @@ const expressRouter = ({
 
       if (readError !== undefined) {
         if (readError.code === "ENOENT") {
+
           return {
-            error: {
+            error: createReadError({
               code: ETryReadErrorCode.FILE_NOT_FOUND,
               message: readError.message,
-            }
+              cause: readError
+            })
           };
         }
 
         return {
-          error: {
+          error: createReadError({
             code: ETryReadErrorCode.IO_ERROR,
             message: readError.message,
-          }
+            cause: readError
+          })
         };
       }
 
@@ -177,13 +181,12 @@ const expressRouter = ({
       });
 
       if (transpileError !== undefined) {
-        console.error(transpileError);
-
         return {
-          error: {
+          error: createReadError({
             code: ETryReadErrorCode.IO_ERROR,
-            message: transpileError.message,
-          }
+            message: `failed to transpile code of "${filePath}"`,
+            cause: transpileError
+          })
         };
       }
 
