@@ -295,7 +295,8 @@ const expressRouter = ({
 export {
   expressRouter,
 
-  defaultResolveImportPath
+  defaultResolveImportPath,
+  defaultDetermineFileTypeByPath,
 };
 
 export type {
