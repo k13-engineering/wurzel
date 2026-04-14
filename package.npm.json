@@ -1,0 +1,24 @@
+{
+  "name": "wurzel",
+  "description": "A tool to serve script files from different directories",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "dist/lib/index.js",
+  "bin": {
+    "wurzel": "dist/bin/wurzel.js"
+  },
+  "author": "Simon Kadisch",
+  "license": "LGPL-2.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/k13-engineering/wurzel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/k13-engineering/wurzel/issues"
+  },
+  "homepage": "https://github.com/k13-engineering/wurzel#readme"
+}

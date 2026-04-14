@@ -1,11 +1,6 @@
 {
-  "name": "wurzel",
-  "version": "0.0.9",
   "type": "module",
-  "files": [
-    "dist"
-  ],
-  "main": "dist/lib/index.js",
+  "main": "lib/index.ts",
   "dependencies": {
     "commentscript": "^0.0.10",
     "es6-debug-server": "^0.0.9",
@@ -14,29 +9,23 @@
     "lru-cache": "^10.2.1"
   },
   "devDependencies": {
-    "@eslint/js": "^9.7.0",
+    "@eslint/js": "^10.0.1",
+    "@k13engineering/releasetool": "^0.0.5",
     "@types/express": "^4.17.21",
     "@types/node": "^20.12.7",
-    "deno-node": "^0.0.5",
+    "deno-node": "^0.0.12",
     "express": "^5.2.1",
-    "typescript-eslint": "^7.16.1"
+    "npm-check-updates": "^20.0.2",
+    "typescript-eslint": "^8.58.2"
   },
   "bin": {
-    "wurzel": "dist/bin/wurzel.js"
+    "wurzel": "bin/wurzel.ts"
   },
   "scripts": {
     "build": "rm -rf dist/ && deno-node-build --root . --out dist/ --entry lib/index.ts --entry bin/wurzel.ts --entry samples/express/main.ts && cp -r samples/express/frontend dist/samples/express/",
     "lint": "eslint .",
-    "test": "true"
-  },
-  "author": "Simon Kadisch",
-  "license": "LGPL-2.1",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/k13-engineering/wurzel.git"
-  },
-  "bugs": {
-    "url": "https://github.com/k13-engineering/wurzel/issues"
-  },
-  "homepage": "https://github.com/k13-engineering/wurzel#readme"
+    "test": "true",
+    "type-check": "tsc --noEmit",
+    "update-deps": "npm-check-updates -u"
+  }
 }

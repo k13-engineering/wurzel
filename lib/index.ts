@@ -35,6 +35,7 @@ type TTranspileResult = ITranspileErrorResult | ITranspileSuccessResult;
 
 const defaultResolveImportPath: TResolveImportPathFunc = async ({ importer, specifier }) => {
   const parentUrl = pathToFileURL(importer);
+  // eslint-disable-next-line no-useless-assignment
   let resolvedUrl: string | undefined = undefined;
 
   try {
@@ -82,6 +83,7 @@ const expressRouter = ({
   maxTranspileCacheSize?: number,
 
   resolveImportPath?: TResolveImportPathFunc
+// eslint-disable-next-line complexity
 }) => {
 
   const router = express.Router();
@@ -119,6 +121,7 @@ const expressRouter = ({
       };
     }
 
+    // eslint-disable-next-line no-useless-assignment
     let transpiled: string | undefined = undefined;
 
     try {
