@@ -12,6 +12,12 @@ app.use("/", wurzel({ express, baseFolder: rootFolder }));
 
 const port = 8080;
 
-app.listen(port, () => {
+// @ts-expect-error wrong type definition for listen callback
+app.listen(port, (err: Error) => {
+  if (err) {
+    console.error("Error starting server:", err);
+    return;
+  }
+
   console.log(`listening on :${port}`);
 });
