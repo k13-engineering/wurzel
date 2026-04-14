@@ -30,7 +30,6 @@ const app = express();
 app.use("/", wurzelExpressRouter({
   express,
   baseFolder,
-  fileEndings: [".ts", ".js", ".mjs"],
   resolveImportPath
 }));
 
