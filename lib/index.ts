@@ -33,6 +33,8 @@ interface ITranspileSuccessResult {
 
 type TTranspileResult = ITranspileErrorResult | ITranspileSuccessResult;
 
+type TFileType = "script" | "script-resource" | "other";
+
 const defaultResolveImportPath: TResolveImportPathFunc = async ({ importer, specifier }) => {
   const parentUrl = pathToFileURL(importer);
   // eslint-disable-next-line no-useless-assignment
@@ -65,23 +67,38 @@ const defaultResolveImportPath: TResolveImportPathFunc = async ({ importer, spec
   };
 };
 
+const defaultScriptFileEndings = [".js", ".ts", ".cjs", ".mjs", ".cts", ".mts"];
+
+const defaultDetermineFileTypeByPath = ({ filePath }: { filePath: string }): TFileType => {
+  const isScript = defaultScriptFileEndings.some((ending) => {
+    return filePath.endsWith(ending);
+  });
+
+  if (isScript) {
+    return "script";
+  }
+
+  return "other";
+};
+
 const expressRouter = ({
   express,
   baseFolder,
-  fileEndings = [".js", ".ts"],
 
   maxAnalyzeCacheSize = 1 * 1024 * 1024,
   maxTranspileCacheSize = 64 * 1024 * 1024,
 
+  determineFileTypeByPath = defaultDetermineFileTypeByPath,
   resolveImportPath = defaultResolveImportPath
 }: {
   express: typeof Express,
   baseFolder: string,
-  fileEndings?: string[],
 
   maxAnalyzeCacheSize?: number,
   maxTranspileCacheSize?: number,
 
+  // eslint-disable-next-line no-unused-vars
+  determineFileTypeByPath?: (args: { filePath: string }) => TFileType,
   resolveImportPath?: TResolveImportPathFunc
 // eslint-disable-next-line complexity
 }) => {
@@ -231,8 +248,13 @@ const expressRouter = ({
       throw Error("HEAD not supported yet");
     }
 
-    const isScript = fileEndings.some((ending) => req.url.endsWith(ending));
-    if (isScript) {
+    const fileType = determineFileTypeByPath({ filePath: req.url });
+
+    if (fileType === "script-resource") {
+      throw Error(`file type ${fileType} is not supported yet`);
+    }
+
+    if (fileType === "script") {
 
       server.handleRequest({
         uri: req.url,
@@ -277,5 +299,6 @@ export {
 };
 
 export type {
-  TResolveImportPathFunc
+  TResolveImportPathFunc,
+  TFileType
 };
