@@ -1,11 +1,11 @@
 import {
   createReadError,
-  create as createServer,
-  ETryReadErrorCode,
+  createEs6DebugServer,
   defaultCodeAnalyzer
 } from "es6-debug-server";
 import type {
   ICodeAnalyzeResult,
+  TCodeAnalyzeFunc,
   TResolveImportPathFunc,
 } from "es6-debug-server";
 import { readFile } from "node:fs/promises";
@@ -88,6 +88,7 @@ const expressRouter = ({
   maxAnalyzeCacheSize = 1 * 1024 * 1024,
   maxTranspileCacheSize = 64 * 1024 * 1024,
 
+  analyzeCode: providedAnalyzeCode = defaultCodeAnalyzer,
   determineFileTypeByPath = defaultDetermineFileTypeByPath,
   resolveImportPath = defaultResolveImportPath
 }: {
@@ -97,6 +98,7 @@ const expressRouter = ({
   maxAnalyzeCacheSize?: number,
   maxTranspileCacheSize?: number,
 
+  analyzeCode?: TCodeAnalyzeFunc,
   // eslint-disable-next-line no-unused-vars
   determineFileTypeByPath?: (args: { filePath: string }) => TFileType,
   resolveImportPath?: TResolveImportPathFunc
@@ -162,7 +164,7 @@ const expressRouter = ({
     };
   };
 
-  const server = createServer({
+  const server = createEs6DebugServer({
 
     scriptRootFolder: baseFolder,
 
@@ -179,7 +181,7 @@ const expressRouter = ({
 
           return {
             error: createReadError({
-              code: ETryReadErrorCode.FILE_NOT_FOUND,
+              code: "FILE_NOT_FOUND",
               message: readError.message,
               cause: readError
             })
@@ -188,7 +190,7 @@ const expressRouter = ({
 
         return {
           error: createReadError({
-            code: ETryReadErrorCode.IO_ERROR,
+            code: "IO_ERROR",
             message: readError.message,
             cause: readError
           })
@@ -203,7 +205,7 @@ const expressRouter = ({
       if (transpileError !== undefined) {
         return {
           error: createReadError({
-            code: ETryReadErrorCode.IO_ERROR,
+            code: "IO_ERROR",
             message: `failed to transpile code of "${filePath}"`,
             cause: transpileError
           })
@@ -228,7 +230,7 @@ const expressRouter = ({
         };
       }
 
-      const analyzeResult = defaultCodeAnalyzer({ code });
+      const analyzeResult = providedAnalyzeCode({ code });
       if (analyzeResult.error !== undefined) {
         return {
           error: analyzeResult.error
@@ -297,6 +299,7 @@ export {
 
   defaultResolveImportPath,
   defaultDetermineFileTypeByPath,
+  defaultCodeAnalyzer,
 };
 
 export type {
