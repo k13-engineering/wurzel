@@ -72,6 +72,11 @@ const isMalformedUri = ({ uri }: { uri: string }) => {
   return uri.includes("//") || uri.split("/").includes("..");
 };
 
+const queryOf = ({ url }: { url: string }) => {
+  const queryStart = url.indexOf("?");
+  return queryStart < 0 ? "" : url.substring(queryStart);
+};
+
 const defaultScriptFileEndings = [".js", ".ts", ".cjs", ".mjs", ".cts", ".mts"];
 
 const defaultDetermineFileTypeByPath = ({ filePath }: { filePath: string }): TFileType => {
@@ -251,16 +256,16 @@ const expressRouter = ({
 
   const serveScript = ({ req, res }: { req: Express.Request, res: Express.Response }) => {
 
-    if (isMalformedUri({ uri: req.url })) {
+    if (isMalformedUri({ uri: req.path })) {
       res.status(400).end("bad request");
       return;
     }
 
     server.handleRequest({
-      uri: req.url,
+      uri: req.path,
 
       handleRedirect: ({ uri }) => {
-        const redirectLocation = `${req.baseUrl}${uri}`;
+        const redirectLocation = `${req.baseUrl}${uri}${queryOf({ url: req.url })}`;
         res.redirect(redirectLocation);
       },
 
@@ -288,7 +293,7 @@ const expressRouter = ({
       throw Error("HEAD not supported yet");
     }
 
-    const fileType = determineFileTypeByPath({ filePath: req.url });
+    const fileType = determineFileTypeByPath({ filePath: req.path });
 
     if (fileType === "script-resource") {
       throw Error(`file type ${fileType} is not supported yet`);
