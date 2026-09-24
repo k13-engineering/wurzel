@@ -93,6 +93,11 @@ const queryOf = ({ url }: { url: string }) => {
   return queryStart < 0 ? "" : url.substring(queryStart);
 };
 
+// ENOTDIR means that a parent folder of the path is a file, so there is no such file either
+const isFileNotFoundError = ({ error }: { error: NodeJS.ErrnoException }) => {
+  return error.code === "ENOENT" || error.code === "ENOTDIR";
+};
+
 const defaultScriptFileEndings = [".js", ".ts", ".cjs", ".mjs", ".cts", ".mts"];
 
 const defaultDetermineFileTypeByPath = ({ filePath }: { filePath: string }): TFileType => {
@@ -203,7 +208,7 @@ const expressRouter = ({
       });
 
       if (readError !== undefined) {
-        if (readError.code === "ENOENT") {
+        if (isFileNotFoundError({ error: readError })) {
 
           return {
             error: createReadError({
