@@ -285,8 +285,10 @@ const expressRouter = ({
     server.handleRequest({
       uri: filePath,
 
-      handleRedirect: ({ uri }) => {
-        const redirectLocation = `${req.baseUrl}${encodePath({ path: uri })}${queryOf({ url: req.url })}`;
+      // a relative redirect is resolved by the client against the url it requested, which keeps it below
+      // wherever the router is reachable, even below a path prefix of a reverse proxy the router cannot see
+      handleRedirect: ({ relativeUri }) => {
+        const redirectLocation = `${encodePath({ path: relativeUri })}${queryOf({ url: req.url })}`;
         res.redirect(redirectLocation);
       },
 
