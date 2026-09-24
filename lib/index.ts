@@ -67,9 +67,25 @@ const defaultResolveImportPath: TResolveImportPathFunc = async ({ importer, spec
   };
 };
 
-// es6-debug-server rejects such uris, so they have to be answered before reaching it
+// es6-debug-server rejects uris containing "//" or "..", and a file path must not contain null bytes,
+// so such uris have to be answered before reaching es6-debug-server
 const isMalformedUri = ({ uri }: { uri: string }) => {
-  return uri.includes("//") || uri.split("/").includes("..");
+  return uri.includes("//") || uri.split("/").includes("..") || uri.includes("\0");
+};
+
+const decodePath = ({ path }: { path: string }) => {
+  try {
+    return decodeURIComponent(path);
+  } catch (ex) {
+    // express answers errors with their status
+    throw Object.assign(Error(`failed to decode path "${path}"`, { cause: ex }), { status: 400 });
+  }
+};
+
+const encodePath = ({ path }: { path: string }) => {
+  return path.split("/").map((segment) => {
+    return encodeURIComponent(segment);
+  }).join("/");
 };
 
 const queryOf = ({ url }: { url: string }) => {
@@ -254,18 +270,18 @@ const expressRouter = ({
     resolveImportPath
   });
 
-  const serveScript = ({ req, res }: { req: Express.Request, res: Express.Response }) => {
+  const serveScript = ({ filePath, req, res }: { filePath: string, req: Express.Request, res: Express.Response }) => {
 
-    if (isMalformedUri({ uri: req.path })) {
+    if (isMalformedUri({ uri: filePath })) {
       res.status(400).end("bad request");
       return;
     }
 
     server.handleRequest({
-      uri: req.path,
+      uri: filePath,
 
       handleRedirect: ({ uri }) => {
-        const redirectLocation = `${req.baseUrl}${uri}${queryOf({ url: req.url })}`;
+        const redirectLocation = `${req.baseUrl}${encodePath({ path: uri })}${queryOf({ url: req.url })}`;
         res.redirect(redirectLocation);
       },
 
@@ -293,14 +309,15 @@ const expressRouter = ({
       throw Error("HEAD not supported yet");
     }
 
-    const fileType = determineFileTypeByPath({ filePath: req.path });
+    const filePath = decodePath({ path: req.path });
+    const fileType = determineFileTypeByPath({ filePath });
 
     if (fileType === "script-resource") {
       throw Error(`file type ${fileType} is not supported yet`);
     }
 
     if (fileType === "script") {
-      serveScript({ req, res });
+      serveScript({ filePath, req, res });
       return;
     }
 
