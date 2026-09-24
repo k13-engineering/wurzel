@@ -67,6 +67,11 @@ const defaultResolveImportPath: TResolveImportPathFunc = async ({ importer, spec
   };
 };
 
+// es6-debug-server rejects such uris, so they have to be answered before reaching it
+const isMalformedUri = ({ uri }: { uri: string }) => {
+  return uri.includes("//") || uri.split("/").includes("..");
+};
+
 const defaultScriptFileEndings = [".js", ".ts", ".cjs", ".mjs", ".cts", ".mts"];
 
 const defaultDetermineFileTypeByPath = ({ filePath }: { filePath: string }): TFileType => {
@@ -244,6 +249,39 @@ const expressRouter = ({
     resolveImportPath
   });
 
+  const serveScript = ({ req, res }: { req: Express.Request, res: Express.Response }) => {
+
+    if (isMalformedUri({ uri: req.url })) {
+      res.status(400).end("bad request");
+      return;
+    }
+
+    server.handleRequest({
+      uri: req.url,
+
+      handleRedirect: ({ uri }) => {
+        const redirectLocation = `${req.baseUrl}${uri}`;
+        res.redirect(redirectLocation);
+      },
+
+      handleContent: ({ contentType, content }) => {
+        res.writeHead(200, {
+          "Content-Type": contentType
+        });
+        res.end(content);
+      },
+
+      handleFileNotFound: () => {
+        res.status(404).end("not found");
+      },
+
+      handleInternalError: ({ error }) => {
+        console.error(error);
+        res.status(500).end("internal server error");
+      }
+    });
+  };
+
   router.use((req, res, next) => {
 
     if (req.method === "HEAD") {
@@ -257,32 +295,7 @@ const expressRouter = ({
     }
 
     if (fileType === "script") {
-
-      server.handleRequest({
-        uri: req.url,
-
-        handleRedirect: ({ uri }) => {
-          const redirectLocation = `${req.baseUrl}${uri}`;
-          res.redirect(redirectLocation);
-        },
-
-        handleContent: ({ contentType, content }) => {
-          res.writeHead(200, {
-            "Content-Type": contentType
-          });
-          res.end(content);
-        },
-
-        handleFileNotFound: () => {
-          res.status(404).end("not found");
-        },
-
-        handleInternalError: ({ error }) => {
-          console.error(error);
-          res.status(500).end("internal server error");
-        }
-      });
-
+      serveScript({ req, res });
       return;
     }
 
