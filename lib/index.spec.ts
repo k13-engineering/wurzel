@@ -1,12 +1,26 @@
 import assert from "node:assert/strict";
-import { describe, it, before, after, beforeEach, afterEach } from "mocha";
+import {
+  describe,
+  it,
+  before,
+  after,
+  beforeEach,
+  afterEach
+} from "mocha";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { mkdtemp, mkdir, writeFile, realpath, rm, chmod } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  writeFile,
+  realpath,
+  rm,
+  chmod
+} from "node:fs/promises";
 import os from "node:os";
 import nodePath from "node:path";
 import express from "express";
-import { defaultCodeAnalyzer as upstreamDefaultCodeAnalyzer } from "es6-debug-server";
+import * as es6DebugServer from "es6-debug-server";
 import type { TCodeAnalyzeFunc } from "es6-debug-server";
 import {
   expressRouter,
@@ -17,7 +31,6 @@ import {
 import type { TResolveImportPathFunc } from "./index.ts";
 
 type TRouterOptions = Partial<Parameters<typeof expressRouter>[0]>;
-// eslint-disable-next-line no-unused-vars
 type TMount = (args: { app: express.Express, router: express.Router }) => void;
 
 interface IHttpResponse {
@@ -123,6 +136,7 @@ const startWurzel = ({ baseFolder, options = {}, mount = mountAtRoot }: {
 // forwards everything below `prefix` to the target with the prefix stripped, like a reverse proxy
 // would, without rewriting any response headers
 const startPrefixStrippingProxy = ({ prefix, targetPort }: { prefix: string, targetPort: number }) => {
+  // eslint-disable-next-line k13-engineering/prefer-single-object-parameters
   const listener: http.RequestListener = (req, res) => {
     const url = req.url ?? "";
 
@@ -222,7 +236,7 @@ const exportedNamesOf = ({ modules }: { modules: Map<string, string> }) => {
     return [...code.matchAll(/\bexport const (\w+)/gu)].map((match) => {
       return match[1];
     });
-  }).sort();
+  }).toSorted();
 };
 
 // loads a module and everything it imports like a browser would, keyed by the path each module was served from
@@ -276,12 +290,14 @@ const silenceConsoleError = () => {
 
   beforeEach(() => {
     originalConsoleError = console.error;
+    // eslint-disable-next-line immutable/no-mutation
     console.error = () => {
       return undefined;
     };
   });
 
   afterEach(() => {
+    // eslint-disable-next-line immutable/no-mutation
     console.error = originalConsoleError;
   });
 };
@@ -320,7 +336,7 @@ describe("defaultDetermineFileTypeByPath", () => {
 
 describe("defaultCodeAnalyzer", () => {
   it("is the default code analyzer of es6-debug-server", () => {
-    assert.strictEqual(defaultCodeAnalyzer, upstreamDefaultCodeAnalyzer);
+    assert.strictEqual(defaultCodeAnalyzer, es6DebugServer.defaultCodeAnalyzer);
   });
 });
 
@@ -495,12 +511,10 @@ describe("expressRouter", () => {
       assert.strictEqual(response.status, 404);
     });
 
-    it("responds with 500 for a script that cannot be read", async function () {
-      if (process.getuid?.() === 0) {
-        // root can read the file regardless of its permissions
-        this.skip();
-      }
+    // root can read the file regardless of its permissions
+    const itUnlessRoot = process.getuid?.() === 0 ? it.skip : it;
 
+    itUnlessRoot("responds with 500 for a script that cannot be read", async () => {
       const response = await get({ path: "/unreadable.js" });
 
       assert.strictEqual(response.status, 500);
@@ -620,7 +634,13 @@ describe("expressRouter", () => {
     });
 
     it("serves files classified as other by a custom determineFileTypeByPath as they are", async () => {
-      await start({ options: { determineFileTypeByPath: () => "other" } });
+      await start({
+        options: {
+          determineFileTypeByPath: () => {
+            return "other";
+          }
+        }
+      });
 
       const response = await get({ path: "/typed.ts" });
 
@@ -630,7 +650,13 @@ describe("expressRouter", () => {
     });
 
     it("serves files classified as script by a custom determineFileTypeByPath as scripts", async () => {
-      await start({ options: { determineFileTypeByPath: () => "script" } });
+      await start({
+        options: {
+          determineFileTypeByPath: () => {
+            return "script";
+          }
+        }
+      });
 
       const response = await get({ path: "/custom.es" });
 
@@ -639,7 +665,13 @@ describe("expressRouter", () => {
     });
 
     it("responds with a server error for script resources, as they are not supported yet", async () => {
-      await start({ options: { determineFileTypeByPath: () => "script-resource" } });
+      await start({
+        options: {
+          determineFileTypeByPath: () => {
+            return "script-resource";
+          }
+        }
+      });
 
       const response = await get({ path: "/plain.js" });
 

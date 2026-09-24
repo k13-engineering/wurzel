@@ -11,7 +11,7 @@ import type {
 import { readFile } from "node:fs/promises";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { resolve as resolveImport } from "import-meta-resolve";
+import * as importMetaResolve from "import-meta-resolve";
 // @ts-expect-error missing types
 import { transpileCode } from "commentscript";
 import { LRUCache } from "lru-cache";
@@ -41,7 +41,7 @@ const defaultResolveImportPath: TResolveImportPathFunc = async ({ importer, spec
   let resolvedUrl: string | undefined = undefined;
 
   try {
-    resolvedUrl = resolveImport(specifier, parentUrl.toString());
+    resolvedUrl = importMetaResolve.resolve(specifier, parentUrl.toString());
   } catch (error) {
     return {
       error: error as Error
@@ -77,8 +77,11 @@ const decodePath = ({ path }: { path: string }) => {
   try {
     return decodeURIComponent(path);
   } catch (ex) {
+    const error: Error & { status?: number } = Error(`failed to decode path "${path}"`, { cause: ex });
     // express answers errors with their status
-    throw Object.assign(Error(`failed to decode path "${path}"`, { cause: ex }), { status: 400 });
+    // eslint-disable-next-line immutable/no-mutation
+    error.status = 400;
+    throw error;
   }
 };
 
@@ -130,7 +133,6 @@ const expressRouter = ({
   maxTranspileCacheSize?: number,
 
   analyzeCode?: TCodeAnalyzeFunc,
-  // eslint-disable-next-line no-unused-vars
   determineFileTypeByPath?: (args: { filePath: string }) => TFileType,
   resolveImportPath?: TResolveImportPathFunc
 // eslint-disable-next-line complexity
@@ -138,15 +140,19 @@ const expressRouter = ({
 
   const router = express.Router();
 
+  // eslint-disable-next-line k13-engineering/no-new
   const transpileCache = new LRUCache<string, string>({
     maxSize: maxTranspileCacheSize,
+    // eslint-disable-next-line k13-engineering/prefer-single-object-parameters
     sizeCalculation: (value, key) => {
       return key.length + value.length;
     }
   });
 
+  // eslint-disable-next-line k13-engineering/no-new
   const analyzeCache = new LRUCache<string, ICodeAnalyzeResult>({
     maxSize: maxAnalyzeCacheSize,
+    // eslint-disable-next-line k13-engineering/prefer-single-object-parameters
     sizeCalculation: (value, key) => {
       return key.length + JSON.stringify(value).length;
     }
@@ -310,6 +316,7 @@ const expressRouter = ({
     });
   };
 
+  // eslint-disable-next-line k13-engineering/prefer-single-object-parameters
   router.use((req, res, next) => {
 
     if (req.method === "HEAD") {
