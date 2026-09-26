@@ -12,8 +12,7 @@ import { readFile } from "node:fs/promises";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import * as importMetaResolve from "import-meta-resolve";
-// @ts-expect-error missing types
-import { transpileCode } from "commentscript";
+import tsBlankSpace from "ts-blank-space";
 import { LRUCache } from "lru-cache";
 import type Express from "express";
 
@@ -159,7 +158,7 @@ const expressRouter = ({
   });
 
   // eslint-disable-next-line complexity
-  const maybeTranspile = async ({ filePath, code }: { filePath: string, code: string }): Promise<TTranspileResult> => {
+  const maybeTranspile = ({ filePath, code }: { filePath: string, code: string }): TTranspileResult => {
     if (filePath.endsWith(".js") || filePath.endsWith(".mjs")) {
       return {
         error: undefined,
@@ -181,16 +180,15 @@ const expressRouter = ({
     let transpiled: string | undefined = undefined;
 
     try {
-      const result = await transpileCode({ code });
-      transpiled = result.transpiledCode;
+      // ts-blank-space reports syntax that cannot simply be blanked out, e.g. enums, instead of failing
+      transpiled = tsBlankSpace(code, (node) => {
+        const syntax = code.substring(node.pos, node.end).trim();
+        throw Error(`unsupported TypeScript syntax "${syntax}"`);
+      });
     } catch (ex) {
       return {
         error: ex as Error,
       };
-    }
-
-    if (transpiled === undefined) {
-      throw Error("BUG: transpiled code is undefined");
     }
 
     transpileCache.set(hash, transpiled);
@@ -234,7 +232,7 @@ const expressRouter = ({
         };
       }
 
-      const { error: transpileError, transpiled } = await maybeTranspile({
+      const { error: transpileError, transpiled } = maybeTranspile({
         filePath,
         code: content
       });

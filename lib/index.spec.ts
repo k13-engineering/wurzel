@@ -77,6 +77,7 @@ const fixtureFiles: Record<string, string> = {
   "same-a.js": "export const same = \"same\";\n",
   "same-b.js": "export const same = \"same\";\n",
   "broken.ts": "const = ;\n",
+  "enum.ts": "enum Color { Red }\nexport { Color };\n",
   "imports-builtin.js": "import fs from \"node:fs\";\nexport { fs };\n",
   "imports-missing.js": "import missing from \"not-installed-anywhere\";\nexport { missing };\n",
   "imports-virtual.js": "import { virtual } from \"virtual:thing\";\nexport const usesVirtual = virtual;\n",
@@ -522,6 +523,12 @@ describe("expressRouter", () => {
 
     it("responds with 500 for TypeScript that cannot be transpiled", async () => {
       const response = await get({ path: "/broken.ts" });
+
+      assert.strictEqual(response.status, 500);
+    });
+
+    it("responds with 500 for TypeScript with syntax that cannot be blanked out", async () => {
+      const response = await get({ path: "/enum.ts" });
 
       assert.strictEqual(response.status, 500);
     });
