@@ -787,7 +787,14 @@ describe("expressRouter", () => {
       assert.strictEqual(response.status, 500);
     });
 
-    ["/folder/../plain.js", "//plain.js", "/folder/%2e%2e/plain.js", "/malformed%.js", "/null%00.js"].forEach((path) => {
+    [
+      "/folder/../plain.js",
+      "//plain.js",
+      "/folder/%2e%2e/plain.js",
+      "/folder/..%5Cplain.js",
+      "/malformed%.js",
+      "/null%00.js",
+    ].forEach((path) => {
       it(`rejects the malformed path "${path}" with a client error`, async () => {
         const { port } = await start();
         const response = await sendRequest({ port, path });

@@ -67,7 +67,7 @@ const defaultResolveImportPath: TResolveImportPathFunc = async ({ importer, spec
 };
 
 // es6-debug-server rejects uris containing "//" or "..", and a file path must not contain null bytes,
-// so such uris have to be answered before reaching es6-debug-server
+// such uris are answered right away, whatever else es6-debug-server rejects is caught in serveScript
 const isMalformedUri = ({ uri }: { uri: string }) => {
   return uri.includes("//") || uri.split("/").includes("..") || uri.includes("\0");
 };
@@ -203,6 +203,13 @@ const expressRouter = ({
 
     scriptRootFolder: baseFolder,
 
+    // es6-debug-server serves only the scripts in the script root and what they import, which files are
+    // scripts has to agree with the routing below, or scripts classified by a custom determineFileTypeByPath
+    // are routed to es6-debug-server but not served
+    isScriptFile: ({ filePath }) => {
+      return determineFileTypeByPath({ filePath }) === "script";
+    },
+
     tryReadScriptAsString: async ({ filePath }) => {
 
       const { error: readError, content } = await readFile(filePath, "utf8").then((fileContent) => {
@@ -286,7 +293,8 @@ const expressRouter = ({
       return;
     }
 
-    server.handleRequest({
+    // up to es6-debug-server 0.0.15, handleRequest is declared as returning unknown, not as a promise
+    Promise.resolve(server.handleRequest({
       uri: filePath,
 
       // a relative redirect is resolved by the client against the url it requested, which keeps it below
@@ -311,6 +319,11 @@ const expressRouter = ({
         console.error(error);
         res.status(500).end("internal server error");
       }
+
+    // es6-debug-server rejects a uri it takes for malformed, e.g. one with a ".." segment between backslashes,
+    // unanswered that rejection would take down the whole process
+    })).catch(() => {
+      res.status(400).end("bad request");
     });
   };
 

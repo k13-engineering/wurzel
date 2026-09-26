@@ -2,7 +2,7 @@
   "type": "module",
   "main": "lib/index.ts",
   "dependencies": {
-    "es6-debug-server": "^0.0.14",
+    "es6-debug-server": "^0.0.15",
     "esm-resource": "^0.0.3",
     "import-meta-resolve": "^4.0.0",
     "lru-cache": "^10.2.1",
