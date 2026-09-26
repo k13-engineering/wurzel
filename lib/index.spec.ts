@@ -52,7 +52,204 @@ interface IRunningServer {
 
 const MAX_REDIRECTS = 5;
 
+// each case is a module exporting `result`, which has to equal `expected` once the served code runs
+const typeStrippingCases: { name: string, description: string, lines: string[], expected: unknown }[] = [
+  {
+    name: "annotations",
+    description: "type annotations",
+    lines: [
+      "const count: number = 1;",
+      "const add = (a: number, b: number): number => a + b;",
+      "function greet(this: void, name: string, suffix?: string): string {",
+      "  return name + (suffix ?? \"\");",
+      "}",
+      "const [first]: number[] = [add(count, 2)];",
+      "const { answer }: { answer: number } = { answer: 42 };",
+      "const countArgs = (...values: number[]): number => values.length;",
+      "export const result = [first, answer, greet(\"wurzel\", \"!\"), countArgs(1, 2)];"
+    ],
+    expected: [3, 42, "wurzel!", 2]
+  },
+  {
+    name: "declarations",
+    description: "interfaces and type aliases",
+    lines: [
+      "interface IPoint {",
+      "  x: number;",
+      "  y: number;",
+      "}",
+      "export interface IExported extends IPoint {}",
+      "type TPoints = IPoint[];",
+      "export type TExported = TPoints;",
+      "const points: TPoints = [{ x: 1, y: 2 }];",
+      "export type { IPoint };",
+      "export const result = points;"
+    ],
+    expected: [{ x: 1, y: 2 }]
+  },
+  {
+    name: "type-imports",
+    description: "type-only imports and exports, without loading the modules they refer to",
+    lines: [
+      "import type { TMissing } from \"./missing.ts\";",
+      "import type * as missing from \"./missing.ts\";",
+      "export type { TOther } from \"./missing.ts\";",
+      "export type * from \"./missing.ts\";",
+      "const value: TMissing | missing.TOther = 1;",
+      "export const result = value;"
+    ],
+    expected: 1
+  },
+  {
+    name: "generics",
+    description: "type parameters and type arguments",
+    lines: [
+      "const identity = <T,>(value: T): T => value;",
+      "function wrap<T extends object = object>(value: T): { value: T } {",
+      "  return { value };",
+      "}",
+      "class Box<T> {",
+      "  value: T;",
+      "  constructor(value: T) {",
+      "    this.value = value;",
+      "  }",
+      "}",
+      "const counts = new Map<string, number>([[\"a\", 4]]);",
+      "export const result = [identity<number>(1), wrap<{ b: number }>({ b: 2 }).value.b, new Box<number>(3).value, counts.get(\"a\")];"
+    ],
+    expected: [1, 2, 3, 4]
+  },
+  {
+    name: "assertions",
+    description: "type assertions, satisfies and non-null assertions",
+    lines: [
+      "const input: unknown = \"text\";",
+      "const asString = input as string;",
+      "const constant = { kind: \"constant\" } as const;",
+      "const satisfying = { answer: 42 } satisfies Record<string, number>;",
+      "const found = [1, 2, 3].find((value) => value === 2)!;",
+      "let definite!: number;",
+      "definite = 3;",
+      "export const result = [asString, constant.kind, satisfying.answer, found, definite];"
+    ],
+    expected: ["text", "constant", 42, 2, 3]
+  },
+  {
+    name: "classes",
+    description: "modifiers, abstract members and implements clauses of classes",
+    lines: [
+      "interface INamed {",
+      "  name: string;",
+      "}",
+      "abstract class Base {",
+      "  protected abstract describe(): string;",
+      "}",
+      "class Named extends Base implements INamed {",
+      "  public name: string;",
+      "  private readonly suffix?: string = \"!\";",
+      "  declare injected: string;",
+      "  static readonly kind: string = \"named\";",
+      "  constructor(name: string) {",
+      "    super();",
+      "    this.name = name;",
+      "  }",
+      "  public override describe(): string {",
+      "    return this.name + this.suffix;",
+      "  }",
+      "}",
+      "const named = new Named(\"wurzel\");",
+      "export const result = [named.describe(), Named.kind, Object.hasOwn(named, \"injected\")];"
+    ],
+    expected: ["wurzel!", "named", false]
+  },
+  {
+    name: "ambient",
+    description: "ambient declarations and overload signatures",
+    lines: [
+      "declare const injected: string;",
+      "declare function external(): void;",
+      "declare class External {}",
+      "declare enum AmbientEnum { A }",
+      "declare namespace AmbientNamespace {",
+      "  const value: number;",
+      "}",
+      "declare module \"virtual\" {",
+      "  export const value: number;",
+      "}",
+      "declare global {",
+      "  var wurzelGlobal: string;",
+      "}",
+      "function parse(value: string): number;",
+      "function parse(value: number): number;",
+      "function parse(value: string | number): number {",
+      "  return Number(value);",
+      "}",
+      "export const result = [typeof injected, parse(\"1\"), parse(2)];"
+    ],
+    expected: ["undefined", 1, 2]
+  },
+  {
+    // without a semicolon in place of the type alias, the parenthesis would call the result of count()
+    name: "asi",
+    description: "a type between two statements without the first one ending in a semicolon",
+    lines: [
+      "let calls = 0;",
+      "const count = () => {",
+      "  calls += 1;",
+      "  return count;",
+      "};",
+      "count()",
+      "type TBetween = number",
+      "(() => {",
+      "  calls += 10;",
+      "})();",
+      "export const result = calls;"
+    ],
+    expected: 11
+  }
+];
+
+// syntax that has a runtime effect, so it cannot be stripped by blanking out types
+const unsupportedTypeScriptCases: { name: string, description: string, lines: string[] }[] = [
+  {
+    name: "enum",
+    description: "enums",
+    lines: ["enum Color { Red }", "export { Color };"]
+  },
+  {
+    name: "const-enum",
+    description: "const enums",
+    lines: ["const enum Color { Red }", "export const red = Color.Red;"]
+  },
+  {
+    name: "namespace",
+    description: "namespaces containing values",
+    lines: ["namespace Values {", "  export const value = 1;", "}", "export { Values };"]
+  },
+  {
+    name: "parameter-properties",
+    description: "parameter properties",
+    lines: ["class Point {", "  constructor(public x: number) {}", "}", "export { Point };"]
+  },
+  {
+    name: "angle-bracket-assertion",
+    description: "angle bracket type assertions",
+    lines: ["const input: unknown = 1;", "export const value = <number>input;"]
+  }
+];
+
+const sourceOf = ({ lines }: { lines: string[] }) => {
+  return `${lines.join("\n")}\n`;
+};
+
 const fixtureFiles: Record<string, string> = {
+  ...Object.fromEntries(typeStrippingCases.map(({ name, lines }) => {
+    return [`stripping/${name}.ts`, sourceOf({ lines })];
+  })),
+  ...Object.fromEntries(unsupportedTypeScriptCases.map(({ name, lines }) => {
+    return [`unsupported/${name}.ts`, sourceOf({ lines })];
+  })),
+  "stripping/inline-type-import.ts": "import { type TShared, shared } from \"../shared.js\";\nexport const inline: TShared = shared;\n",
   "index.html": "<!doctype html><title>wurzel fixture</title>\n",
   "plain.js": "export const plain = \"plain\";\n",
   "plain.mjs": "export const plainModule = \"plain module\";\n",
@@ -77,7 +274,6 @@ const fixtureFiles: Record<string, string> = {
   "same-a.js": "export const same = \"same\";\n",
   "same-b.js": "export const same = \"same\";\n",
   "broken.ts": "const = ;\n",
-  "enum.ts": "enum Color { Red }\nexport { Color };\n",
   "imports-builtin.js": "import fs from \"node:fs\";\nexport { fs };\n",
   "imports-missing.js": "import missing from \"not-installed-anywhere\";\nexport { missing };\n",
   "imports-virtual.js": "import { virtual } from \"virtual:thing\";\nexport const usesVirtual = virtual;\n",
@@ -224,6 +420,17 @@ const requestFollowingRedirects = async ({ port, path, redirects = [] }: {
 const assertServesJavaScript = ({ response }: { response: IFinalResponse }) => {
   assert.strictEqual(response.status, 200, `"${response.path}" answered with ${response.status}: ${response.body}`);
   assert.match(response.headers["content-type"] ?? "", /^text\/javascript\b/u);
+};
+
+// types are replaced by spaces, or a semicolon where the next statement would otherwise continue the previous one,
+// so that all remaining code stays at its line and column and no source map is needed
+const assertKeepsPositions = ({ source, served }: { source: string, served: string }) => {
+  assert.strictEqual(served.length, source.length);
+
+  served.split("").forEach((char, index) => {
+    const blanked = source[index] !== "\n" && (char === " " || char === ";");
+    assert.ok(char === source[index] || blanked, `"${char}" at offset ${index} replaces "${source[index]}"`);
+  });
 };
 
 const importSpecifiersOf = ({ code }: { code: string }) => {
@@ -499,6 +706,47 @@ describe("expressRouter", () => {
     });
   });
 
+  describe("stripping types", () => {
+    typeStrippingCases.forEach(({ name, description, expected }) => {
+      it(`strips ${description}`, async () => {
+        const response = await get({ path: `/stripping/${name}.ts` });
+
+        assertServesJavaScript({ response });
+        const served = await importServedModule({ code: response.body });
+        assert.deepStrictEqual(served.result, expected);
+      });
+
+      it(`keeps the code at its line and column when stripping ${description}`, async () => {
+        const response = await get({ path: `/stripping/${name}.ts` });
+
+        assertServesJavaScript({ response });
+        assertKeepsPositions({ source: fixtureFiles[`stripping/${name}.ts`], served: response.body });
+      });
+    });
+
+    it("keeps the value imports of an import with inline type imports", async () => {
+      const modules = await loadModuleGraph({ port: (await start()).port, entryPath: "/stripping/inline-type-import.ts" });
+
+      assert.deepStrictEqual(exportedNamesOf({ modules }), ["inline", "shared"]);
+    });
+
+    // the default analyzer rejects most unsupported syntax as well, so an analyzer accepting any code
+    // makes sure that it is rejected when stripping types
+    const acceptAnyCode: TCodeAnalyzeFunc = () => {
+      return { error: undefined, result: { imports: [] } };
+    };
+
+    unsupportedTypeScriptCases.forEach(({ name, description }) => {
+      it(`responds with 500 for ${description}, as they cannot be stripped`, async () => {
+        await start({ options: { analyzeCode: acceptAnyCode } });
+
+        const response = await get({ path: `/unsupported/${name}.ts` });
+
+        assert.strictEqual(response.status, 500);
+      });
+    });
+  });
+
   describe("failing script requests", () => {
     it("responds with 404 for a script that does not exist", async () => {
       const response = await get({ path: "/does-not-exist.js" });
@@ -523,12 +771,6 @@ describe("expressRouter", () => {
 
     it("responds with 500 for TypeScript that cannot be transpiled", async () => {
       const response = await get({ path: "/broken.ts" });
-
-      assert.strictEqual(response.status, 500);
-    });
-
-    it("responds with 500 for TypeScript with syntax that cannot be blanked out", async () => {
-      const response = await get({ path: "/enum.ts" });
 
       assert.strictEqual(response.status, 500);
     });
