@@ -23,14 +23,14 @@ import express from "express";
 import * as es6DebugServer from "es6-debug-server";
 import type { TCodeAnalyzeFunc } from "es6-debug-server";
 import {
-  expressRouter,
+  wurzelExpressRouter,
   defaultResolveImportPath,
   defaultDetermineFileTypeByPath,
   defaultCodeAnalyzer
 } from "./index.ts";
 import type { TResolveImportPathFunc } from "./index.ts";
 
-type TRouterOptions = Partial<Parameters<typeof expressRouter>[0]>;
+type TRouterOptions = Partial<Parameters<typeof wurzelExpressRouter>[0]>;
 type TMount = (args: { app: express.Express, router: express.Router }) => void;
 
 interface IHttpResponse {
@@ -326,7 +326,7 @@ const startWurzel = ({ baseFolder, options = {}, mount = mountAtRoot }: {
   mount?: TMount
 }) => {
   const app = express();
-  mount({ app, router: expressRouter({ express, baseFolder, ...options }) });
+  mount({ app, router: wurzelExpressRouter({ express, baseFolder, ...options }) });
   return listen({ listener: app });
 };
 
@@ -602,7 +602,7 @@ describe("defaultResolveImportPath", () => {
   });
 });
 
-describe("expressRouter", () => {
+describe("wurzelExpressRouter", () => {
   let server: IRunningServer | undefined = undefined;
 
   const start = async (args: { baseFolder?: string, options?: TRouterOptions, mount?: TMount } = {}) => {

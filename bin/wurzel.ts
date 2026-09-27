@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 import express from "express";
-import { expressRouter } from "../lib/index.ts";
+import { wurzelExpressRouter } from "../lib/index.ts";
 import path from "node:path";
 
 const app = express();
 
 const rootFolder = path.resolve(".");
 
-app.use("/", expressRouter({ express, baseFolder: rootFolder }));
+app.use("/", wurzelExpressRouter({ express, baseFolder: rootFolder }));
 
 const port = 8080;
 

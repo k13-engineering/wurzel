@@ -114,7 +114,7 @@ const defaultDetermineFileTypeByPath = ({ filePath }: { filePath: string }): TFi
   return "other";
 };
 
-const expressRouter = ({
+const wurzelExpressRouter = ({
   express,
   baseFolder,
 
@@ -355,7 +355,7 @@ const expressRouter = ({
 };
 
 export {
-  expressRouter,
+  wurzelExpressRouter,
 
   defaultResolveImportPath,
   defaultDetermineFileTypeByPath,

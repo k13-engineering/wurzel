@@ -1,5 +1,5 @@
 import {
-  expressRouter,
+  wurzelExpressRouter,
   defaultResolveImportPath,
   type TResolveImportPathFunc
 } from "../../lib/index.ts";
@@ -27,7 +27,7 @@ const resolveImportPath: TResolveImportPathFunc = async ({ importer, specifier }
 
 const app = express();
 
-app.use("/", expressRouter({
+app.use("/", wurzelExpressRouter({
   express,
   baseFolder,
   resolveImportPath
